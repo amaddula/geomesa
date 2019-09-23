@@ -8,7 +8,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>geomesa-geospark</artifactId>
+    <artifactId>geomesa-geospark_2.11</artifactId>
     <name>GeoMesa GeoSpark</name>
 
     <properties>
@@ -24,7 +24,7 @@
 
         <dependency>
             <groupId>org.locationtech.geomesa</groupId>
-            <artifactId>geomesa-spark-jts_2.11</artifactId>
+            <artifactId>geomesa-spark-jts_${scala.binary.version}</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
