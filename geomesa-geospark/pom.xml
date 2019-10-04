@@ -16,12 +16,24 @@
     </properties>
 
     <dependencies>
+        <!-- GeoSpark -->
         <dependency>
             <groupId>org.datasyslab</groupId>
             <artifactId>geospark</artifactId>
             <version>${geospark.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.datasyslab</groupId>
+            <artifactId>geospark-sql_2.3</artifactId>
+            <version>1.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.datasyslab</groupId>
+            <artifactId>geospark-viz_2.3</artifactId>
+            <version>1.2.0</version>
+        </dependency>
 
+        <!-- Spark -->
         <dependency>
             <groupId>org.locationtech.geomesa</groupId>
             <artifactId>geomesa-spark-jts_${scala.binary.version}</artifactId>
@@ -44,6 +56,8 @@
             <version>${spark.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- JTS -->
         <dependency>
             <groupId>org.locationtech.jts.io</groupId>
             <artifactId>jts-io-common</artifactId>
@@ -52,12 +66,14 @@
             <groupId>org.locationtech.jts</groupId>
             <artifactId>jts-core</artifactId>
         </dependency>
+
+        <!-- Spatial4J -->
         <dependency>
             <groupId>org.locationtech.spatial4j</groupId>
             <artifactId>spatial4j</artifactId>
         </dependency>
 
-        <!-- test -->
+        <!-- Test -->
         <dependency>
             <groupId>org.specs2</groupId>
             <artifactId>specs2-core_${scala.binary.version}</artifactId>
