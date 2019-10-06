@@ -34,14 +34,16 @@ class GeoSparkTest extends Specification with TestEnvironment {
       StructField("longitude", DoubleType, nullable=false)))
 
     val dataFile = this.getClass.getClassLoader.getResource("jts-example.csv").getPath
-    df = sparkSession.read.format("csv")
+    df = spark.read.format("csv")
       .option("delimiter", "\n")
       .option("header", "false")
       .option("sep", "-")
       .option("timestampFormat", "yyyy/MM/dd HH:mm:ss ZZ").load(dataFile)
     df.createOrReplaceTempView("inputtable")
+    df.show()
 
-//    JTS VERSION
+
+    //    JTS VERSION
 //    val dataFile = this.getClass.getClassLoader.getResource("jts-example.csv").getPath
 //    df = spark.read.schema(schema)
 //      .option("sep", "-")
@@ -53,11 +55,13 @@ class GeoSparkTest extends Specification with TestEnvironment {
 
     "have rows with user defined types" >> {
 
-      newDF = sparkSession.sql(
-        """
-          |SELECT ST_Point(CAST(inputtable._c0 AS Decimal(24,20)),CAST(inputtable._c1 AS Decimal(24,20))) AS checkin
-          |FROM inputtable
-    """.stripMargin)
+//      newDF = sparkSession.sql(
+//        """
+//          |SELECT ST_PointFromText(pointtable._c0,',') AS pointshape
+//          |SELECT ST_PolygonFromText(polygontable._c0,',') AS polygonshape
+//          |SELECT ST_PointFromText(pointtable._c0,',') AS pointshape
+//          |FROM inputtable
+//    """.stripMargin)
 
 //      JTS VERSION
 //      newDF = df.withColumn("point", st_pointFromText(col("pointText")))

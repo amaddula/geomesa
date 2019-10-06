@@ -10,44 +10,33 @@ package org.locationtech.geomesa.geospark
 
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql._
+import org.apache.spark.serializer.KryoSerializer
+import org.apache.spark.{SparkConf, SparkContext}
+import org.datasyslab.geosparkviz.core.Serde.GeoSparkVizKryoRegistrator
+import org.datasyslab.geosparksql.utils.GeoSparkSQLRegistrator
 
 /**
  * Common JTS test setup and utilities.
  */
 trait TestEnvironment {
   implicit lazy val spark: SparkSession = {
-//    JTS VERSION
-////    SparkSession.builder()
-////      .appName("testSpark")
-////      .master("local[*]")
-////      .getOrCreate()
-////      .withJTS
-
     SparkSession.builder()
       .appName("testGeoSpark")
       .master("local[*]")
       .config("spark.serializer",classOf[KryoSerializer].getName)
-      .config("spark.kryo.registrator", classOf[GeoSparkKryoRegistrator].getName)
+      .config("spark.kryo.registrator", classOf[GeoSparkVizKryoRegistrator].getName)
       .master("local[*]").appName("myGeoSparkSQLdemo").getOrCreate()
   }
 
-//  JTS VERSION
-//  lazy val sc: SQLContext = spark.sqlContext
-//    .withJTS // <-- this should be a noop given the above, but is here to test that code path
+  GeoSparkSQLRegistrator.registerAll(spark)
 
-val conf = new SparkConf()
-conf.setAppName("testGeoSpark")
-conf.setMaster("local[*]") // Delete this if run in cluster mode
-// Enable GeoSpark custom Kryo serializer
-conf.set("spark.serializer", classOf[KryoSerializer].getName)
-conf.set("spark.kryo.registrator", classOf[GeoSparkKryoRegistrator].getName)
-val sc = new SparkContext(conf)
-
-//  JTS VERSION
-//lazy val sc: SQLContext = spark.sqlContext
-//  .withJTS // <-- this should be a noop given the above, but is here to test that code path
-
-
+  val conf = new SparkConf()
+  conf.setAppName("GeoSparkRunnableExample") // Change this to a proper name
+  conf.setMaster("local[*]") // Delete this if run in cluster mode
+  // Enable GeoSpark custom Kryo serializer
+  conf.set("spark.serializer", classOf[KryoSerializer].getName)
+  conf.set("spark.kryo.registrator", classOf[GeoSparkVizKryoRegistrator].getName)
+  lazy val sc = new SparkContext(conf)
 
   /**
    * Constructor for creating a DataFrame with a single row and no columns.
