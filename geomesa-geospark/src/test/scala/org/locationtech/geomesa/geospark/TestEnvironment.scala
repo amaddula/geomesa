@@ -12,7 +12,7 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql._
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.{SparkConf, SparkContext}
-import org.datasyslab.geosparkviz.core.Serde.GeoSparkVizKryoRegistrator
+import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator
 import org.datasyslab.geosparksql.utils.GeoSparkSQLRegistrator
 
 /**
@@ -24,7 +24,7 @@ trait TestEnvironment {
       .appName("testGeoSpark")
       .master("local[*]")
       .config("spark.serializer",classOf[KryoSerializer].getName)
-      .config("spark.kryo.registrator", classOf[GeoSparkVizKryoRegistrator].getName)
+      .config("spark.kryo.registrator", classOf[GeoSparkKryoRegistrator].getName)
       .master("local[*]").appName("myGeoSparkSQLdemo").getOrCreate()
   }
 
@@ -35,7 +35,7 @@ trait TestEnvironment {
   conf.setMaster("local[*]") // Delete this if run in cluster mode
   // Enable GeoSpark custom Kryo serializer
   conf.set("spark.serializer", classOf[KryoSerializer].getName)
-  conf.set("spark.kryo.registrator", classOf[GeoSparkVizKryoRegistrator].getName)
+  conf.set("spark.kryo.registrator", classOf[GeoSparkKryoRegistrator].getName)
   lazy val sc = new SparkContext(conf)
 
   /**
