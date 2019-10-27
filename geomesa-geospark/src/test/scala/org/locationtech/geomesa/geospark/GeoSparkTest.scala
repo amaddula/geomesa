@@ -9,20 +9,28 @@
 package org.locationtech.geomesa.geospark
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.datasyslab.geospark
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
 import org.junit.runner.RunWith
-import org.locationtech.jts.geom._
+import org.locationtech.geomesa.features.ScalaSimpleFeature
+import org.locationtech.geomesa.spark.jts.TestEnvironment
+import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
+import org.locationtech.geomesa.utils.io.WithClose
 import org.opengis.feature.simple.SimpleFeature
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
+import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 
 @RunWith(classOf[JUnitRunner])
-class GeoSparkTest extends Specification with TestEnvironment {
+class GeoSparkTest extends Specification with TestEnvironment
+                                         with GeoMesaSparkTestEnvironment
+                                         with GeoSparkTestEnvironment {
+
+  //note that each mixin trait has different spark sessions and spark contexts
+  //TestEnvironment is used to parse the csv into dataframes
+  //GeoMesaSparkTestEnvironment is for the tests modeled after the GeoMesaSpatialRDDProvider
+  //GeoSparkTestEnvironment is going to be used for managing data in GeoSpark
 
   sequential
 
@@ -79,7 +87,8 @@ class GeoSparkTest extends Specification with TestEnvironment {
 
   "geospark rdd" should {
     "read from geomesa rdd" in {
-      val ds = DataStoreFinder.getDataStore(dsParams)
+      val dsParams1 = Map("cqengine" -> "true")
+      val ds = DataStoreFinder.getDataStore(dsParams1)
       ds.createSchema(jtsExampleSft)
       WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
         jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))

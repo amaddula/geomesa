@@ -30,5 +30,5 @@ trait GeoMesaSparkTestEnvironment {
   val conf = new SparkConf().setMaster("local[2]").setAppName("testSpark")
   conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   conf.set("spark.kryo.registrator", classOf[GeoMesaSparkKryoRegistrator].getName)
-  lazy val gmsc = SparkContext.getOrCreate(conf)
+  gmsc = SparkContext.getOrCreate(conf)
 }
