@@ -18,8 +18,8 @@ import org.datasyslab.geosparksql.utils.GeoSparkSQLRegistrator
 /**
  * Common JTS test setup and utilities.
  */
-trait TestEnvironment {
-  implicit lazy val spark: SparkSession = {
+trait GeoSparkTestEnvironment {
+  implicit lazy val geospark: SparkSession = {
     SparkSession.builder()
       .appName("testGeoSpark")
       .master("local[*]")
@@ -28,7 +28,7 @@ trait TestEnvironment {
       .master("local[*]").appName("myGeoSparkSQLdemo").getOrCreate()
   }
 
-  GeoSparkSQLRegistrator.registerAll(spark)
+  GeoSparkSQLRegistrator.registerAll(geospark)
 
   val conf = new SparkConf()
   conf.setAppName("GeoSparkRunnableExample") // Change this to a proper name
@@ -36,7 +36,7 @@ trait TestEnvironment {
   // Enable GeoSpark custom Kryo serializer
   conf.set("spark.serializer", classOf[KryoSerializer].getName)
   conf.set("spark.kryo.registrator", classOf[GeoSparkKryoRegistrator].getName)
-  lazy val sc = new SparkContext(conf)
+  lazy val gsc = new SparkContext(conf)
 
   /**
    * Constructor for creating a DataFrame with a single row and no columns.
