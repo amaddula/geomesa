@@ -27,8 +27,8 @@ trait GeoMesaSparkTestEnvironment {
 
   var gmsc: SparkContext = _
 
-  val conf = new SparkConf().setMaster("local[2]").setAppName("testSpark")
-  conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-  conf.set("spark.kryo.registrator", classOf[GeoMesaSparkKryoRegistrator].getName)
-  gmsc = SparkContext.getOrCreate(conf)
+  val gmconf = new SparkConf().setMaster("local[2]").setAppName("GeoMesaSparkRunnableExample")
+  gmconf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+  gmconf.set("spark.kryo.registrator", classOf[GeoMesaSparkKryoRegistrator].getName)
+  gmsc = SparkContext.getOrCreate(gmconf)
 }

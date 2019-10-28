@@ -22,6 +22,8 @@ import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 
+import scala.collection.JavaConversions._
+
 @RunWith(classOf[JUnitRunner])
 class GeoSparkTest extends Specification with TestEnvironment
                                          with GeoMesaSparkTestEnvironment
@@ -87,8 +89,7 @@ class GeoSparkTest extends Specification with TestEnvironment
 
   "geospark rdd" should {
     "read from geomesa rdd" in {
-      val dsParams1 = Map("cqengine" -> "true")
-      val ds = DataStoreFinder.getDataStore(dsParams1)
+      val ds = DataStoreFinder.getDataStore(dsParams)
       ds.createSchema(jtsExampleSft)
       WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
         jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
