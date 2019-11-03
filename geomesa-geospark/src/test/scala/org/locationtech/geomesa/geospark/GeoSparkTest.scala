@@ -24,6 +24,18 @@ import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator
 
 import scala.collection.JavaConversions._
 
+import org.apache.hadoop.conf.Configuration
+import org.apache.spark.{SparkConf, SparkContext}
+import org.geotools.data.{DataStoreFinder, Query, Transaction}
+import org.junit.runner.RunWith
+import org.locationtech.geomesa.features.ScalaSimpleFeature
+import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
+import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
+import org.locationtech.geomesa.utils.io.WithClose
+import org.opengis.feature.simple.SimpleFeature
+import org.specs2.mutable.Specification
+import org.specs2.runner.JUnitRunner
+
 @RunWith(classOf[JUnitRunner])
 class GeoSparkTest extends Specification with TestEnvironment
                                          with GeoMesaSparkTestEnvironment
@@ -63,6 +75,10 @@ class GeoSparkTest extends Specification with TestEnvironment
     SimpleFeatureTypes.createType("jtsExample",
     "name:String,*point:Point:srid=4326,*polygon:Polygon:srid=4326,latitude:Double,longitude:Double")
 
+  lazy val chicagoSft =
+    SimpleFeatureTypes.createType("chicago",
+      "arrest:String,case_number:Int,dtg:Date,*geom:Point:srid=4326")
+
   lazy val jtsExampleFeatures: Seq[SimpleFeature] = Seq(
     ScalaSimpleFeature.create(jtsExampleSft, "itemA", "POINT(40,40)", "POLYGON(35 35, 45 35, 45 45, 35 45, 35 35)", 40, 40),
     ScalaSimpleFeature.create(jtsExampleSft, "itemB", "POINT(30,30)", "POLYGON(25 25, 35 25, 35 35, 25 35, 25 25)", 30, 30),
@@ -90,10 +106,22 @@ class GeoSparkTest extends Specification with TestEnvironment
   "geospark rdd" should {
     "read from geomesa rdd" in {
       val ds = DataStoreFinder.getDataStore(dsParams)
+      println("break 0")
+      if (ds == null) {
+        println("Failed to connect to PostGIS")
+      }
+
+      println("break0.5")
+      ds.createSchema(chicagoSft)
+
+      println("break 1")
       ds.createSchema(jtsExampleSft)
+      println("break 2")
+
       WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
         jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
       }
+      println("break 3")
 
       val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
 
