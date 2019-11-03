@@ -51,6 +51,12 @@ class GeoSparkTest extends Specification with TestEnvironment
   var df: DataFrame = _
   var newDF: DataFrame = _
 
+//  def simpleFeatureToPoint (sf: SimpleFeature) : Point = {
+//    (Point) sf.getAttribute("point")
+//  }
+//
+//  val pointRDD: PointRDD = sfRDD.map(simpleFeatureToPoint)
+
   // before
   step {
     val schema = StructType(Array(StructField("name",StringType, nullable=false),
