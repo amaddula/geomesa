@@ -23,7 +23,6 @@ import org.specs2.runner.JUnitRunner
 import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 
 import scala.collection.JavaConversions._
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
@@ -32,6 +31,7 @@ import org.locationtech.geomesa.features.ScalaSimpleFeature
 import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
 import org.locationtech.geomesa.utils.io.WithClose
+import org.locationtech.jts.geom.Point
 import org.opengis.feature.simple.SimpleFeature
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -56,6 +56,12 @@ class GeoSparkTest extends Specification with TestEnvironment
 //  }
 //
 //  val pointRDD: PointRDD = sfRDD.map(simpleFeatureToPoint)
+  def simpleFeatureToPoint (sf: ScalaSimpleFeature) : Point = {
+        val pt = sf.getAttribute("point").asInstanceOf[Point]
+        pt.setUserData(sf)
+        println(pt.getUserData)
+       pt
+  }
 
   // before
   step {
