@@ -36,6 +36,9 @@ import org.opengis.feature.simple.SimpleFeature
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
 
+import scala.collection.JavaConversions._
+
+
 @RunWith(classOf[JUnitRunner])
 class GeoSparkTest extends Specification with TestEnvironment
                                          with GeoMesaSparkTestEnvironment
