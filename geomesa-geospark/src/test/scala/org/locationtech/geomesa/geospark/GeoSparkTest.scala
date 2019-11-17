@@ -8,9 +8,13 @@
 
 package org.locationtech.geomesa.geospark
 
+import scala.collection.JavaConversions._
+
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
+import org.datasyslab.geospark.spatialRDD.{CircleRDD, PointRDD, PolygonRDD}
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
 import org.junit.runner.RunWith
 import org.locationtech.geomesa.features.ScalaSimpleFeature
@@ -18,25 +22,10 @@ import org.locationtech.geomesa.spark.jts.TestEnvironment
 import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
 import org.locationtech.geomesa.utils.io.WithClose
+import org.locationtech.jts.geom.{Point, Polygon}
 import org.opengis.feature.simple.SimpleFeature
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
-
-import scala.collection.JavaConversions._
-import org.apache.hadoop.conf.Configuration
-import org.apache.spark.{SparkConf, SparkContext}
-import org.geotools.data.{DataStoreFinder, Query, Transaction}
-import org.junit.runner.RunWith
-import org.locationtech.geomesa.features.ScalaSimpleFeature
-import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
-import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
-import org.locationtech.geomesa.utils.io.WithClose
-import org.locationtech.jts.geom.Point
-import org.opengis.feature.simple.SimpleFeature
-import org.specs2.mutable.Specification
-import org.specs2.runner.JUnitRunner
-
-import scala.collection.JavaConversions._
 
 @RunWith(classOf[JUnitRunner])
 class GeoSparkTest extends Specification with TestEnvironment
@@ -53,24 +42,12 @@ class GeoSparkTest extends Specification with TestEnvironment
   var df: DataFrame = _
   var newDF: DataFrame = _
 
-//  def simpleFeatureToPoint (sf: SimpleFeature) : Point = {
-//    (Point) sf.getAttribute("point")
-//  }
-//
-//  val pointRDD: PointRDD = sfRDD.map(simpleFeatureToPoint)
-  def simpleFeatureToPoint (sf: ScalaSimpleFeature) : Point = {
-        val pt = sf.getAttribute("point").asInstanceOf[Point]
-        pt.setUserData(sf)
-        println(pt.getUserData)
-       pt
+  val simpleFeatureToPoint = (sf: SimpleFeature)  => {
+      val pt = sf.getAttribute("point").asInstanceOf[Point]
+      pt.setUserData(sf)
+      println(pt.getUserData)
+      pt
   }
-
-//  def simpleFeatureToPolygon (sf: ScalaSimpleFeature) : Polygon = {
-//    val poly = sf.getAttribute("polygon").asInstanceOf[Polygon]
-//    poly.setUserData(sf)
-//    println(poly.getUserData)
-//    poly
-//  }
 
   // before
   step {
@@ -106,18 +83,17 @@ class GeoSparkTest extends Specification with TestEnvironment
     "read from dataframe" in {
       val geomesaRDD = df.rdd
       geomesaRDD.collect()
-
       geomesaRDD.count mustEqual(df.count)
     }
 
     // Example row: [itemA,Point (40 40),Polygon ((35 35, 45 35, 45 45, 35 45, 35 35)),40,40]
-    "have rows with user defined types" in {
-      val geomesaRDD = df.rdd
-      geomesaRDD.collect().foreach(println)
-
-      val row = geomesaRDD.first()
-      true mustEqual(true)
-    }
+//    "have rows with user defined types" in {
+//      val geomesaRDD = df.rdd
+//      geomesaRDD.collect().foreach(println)
+//      val row = geomesaRDD.first()
+//
+//      true mustEqual(true)
+//    }
   }
 
   "geospark rdd" should {
@@ -130,23 +106,21 @@ class GeoSparkTest extends Specification with TestEnvironment
       }
 
       val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-//      println("break 0")
-//      if (ds == null) {
-//        println("Failed to connect to PostGIS")
-//      }
-//
-//      println("break 1")
-//      ds.createSchema(jtsExampleSft)
-//      println("break 2")
-//
-//      WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
-//        jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
-//      }
-//      println("break 3")
-//
-//      val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-
       true mustEqual(true)
+    }
+    "should convert to point rdd" in {
+      val ds = DataStoreFinder.getDataStore(dsParams)
+      ds.createSchema(jtsExampleSft)
+
+      WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+        jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+      }
+
+      val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+
+      val pointRDD = rdd.map(simpleFeatureToPoint)
+      pointRDD.collect().foreach(println)
+//      pointRDD.collect().foreach(pt => pt.isInstanceOf[Point] mustEqual true)
     }
   }
 
