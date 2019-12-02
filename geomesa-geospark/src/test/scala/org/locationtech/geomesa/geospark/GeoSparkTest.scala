@@ -42,6 +42,7 @@ class GeoSparkTest extends Specification with TestEnvironment
   var df: DataFrame = _
   var newDF: DataFrame = _
 
+  // Must be in form of a function/object not a method
   val simpleFeatureToPoint = (sf: SimpleFeature)  => {
       val pt = sf.getAttribute("point").asInstanceOf[Point]
       pt.setUserData(sf)
@@ -117,13 +118,14 @@ class GeoSparkTest extends Specification with TestEnvironment
       }
 
       val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-
       val pointRDD = rdd.map(simpleFeatureToPoint)
       pointRDD.collect().foreach(println)
-//      pointRDD.collect().foreach(pt => pt.isInstanceOf[Point] mustEqual true)
+
+      var isPointRDD = true
+      pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
+      isPointRDD mustEqual(true)
     }
   }
-
 
   "spark jts module" should {
 
