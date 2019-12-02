@@ -16,13 +16,14 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
 import org.datasyslab.geospark.spatialRDD.{CircleRDD, PointRDD, PolygonRDD}
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
+import org.geotools.geometry.jts.JTSFactoryFinder
 import org.junit.runner.RunWith
 import org.locationtech.geomesa.features.ScalaSimpleFeature
 import org.locationtech.geomesa.spark.jts.TestEnvironment
 import org.locationtech.geomesa.spark.{GeoMesaSpark, GeoMesaSparkKryoRegistrator}
 import org.locationtech.geomesa.utils.geotools.{FeatureUtils, SimpleFeatureTypes}
 import org.locationtech.geomesa.utils.io.WithClose
-import org.locationtech.jts.geom.{Point, Polygon}
+import org.locationtech.jts.geom.{Coordinate, GeometryFactory, Point, Polygon}
 import org.opengis.feature.simple.SimpleFeature
 import org.specs2.mutable.Specification
 import org.specs2.runner.JUnitRunner
@@ -48,6 +49,23 @@ class GeoSparkTest extends Specification with TestEnvironment
       pt.setUserData(sf)
       println(pt.getUserData)
       pt
+  }
+
+  val simpleFeatureToPolygon = (sf: SimpleFeature)  => {
+    val poly = sf.getAttribute("polygon").asInstanceOf[Polygon]
+    poly.setUserData(sf)
+    println(poly.getUserData)
+    poly
+  }
+
+  val simpleFeatureToLongLat = (sf: SimpleFeature)  => {
+    val geometryFactory: GeometryFactory = JTSFactoryFinder.getGeometryFactory(null)
+    val lat = sf.getAttribute("latitude").asInstanceOf[Double]
+    val long = sf.getAttribute("longitude").asInstanceOf[Double]
+    val pt = geometryFactory.createPoint(new Coordinate(long, lat))
+    pt.setUserData(sf)
+    println("(Long,Lat): " + pt.getUserData)
+    pt
   }
 
   // before
