@@ -43,7 +43,6 @@ class GeoSparkTest extends Specification with TestEnvironment
   var df: DataFrame = _
   var newDF: DataFrame = _
 
-  // Must be in form of a function/object not a method
   val simpleFeatureToPoint = (sf: SimpleFeature)  => {
       val pt = sf.getAttribute("point").asInstanceOf[Point]
       pt.setUserData(sf)
@@ -98,52 +97,96 @@ class GeoSparkTest extends Specification with TestEnvironment
     ScalaSimpleFeature.create(jtsExampleSft, "itemC", "POINT(20 20)", "POLYGON((15 15, 25 15, 25 25, 15 25, 15 15))", 20, 20)
   )
 
+//  val isTypeRDD = (rddType: String, converter: SimpleFeature => Unit) => {
+//    val ds = DataStoreFinder.getDataStore(dsParams)
+//    ds.createSchema(jtsExampleSft)
+//
+//    WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+//      jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+//    }
+//
+//    val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+//    val typeRDD = rdd.map(converter)
+//    typeRDD.collect().foreach(println)
+//
+//    var typeMatches = true
+//    rddType match {
+//      case "Point" => typeRDD.collect().foreach(geom => typeMatches = (typeMatches && geom.isInstanceOf[Point]))
+//      case "Polygon" => typeRDD.collect().foreach(geom => typeMatches = (typeMatches && geom.isInstanceOf[Polygon]))
+//      case _ => typeMatches = false
+//    }
+//    typeMatches
+//  }
+
   "geomesa rdd" should {
     "read from dataframe" in {
       val geomesaRDD = df.rdd
       geomesaRDD.collect()
       geomesaRDD.count mustEqual(df.count)
     }
-
-    // Example row: [itemA,Point (40 40),Polygon ((35 35, 45 35, 45 45, 35 45, 35 35)),40,40]
-//    "have rows with user defined types" in {
-//      val geomesaRDD = df.rdd
-//      geomesaRDD.collect().foreach(println)
-//      val row = geomesaRDD.first()
-//
-//      true mustEqual(true)
-//    }
   }
 
   "geospark rdd" should {
-    "read from geomesa rdd" in {
-      val ds = DataStoreFinder.getDataStore(dsParams)
-      ds.createSchema(jtsExampleSft)
+      "read from geomesa rdd" in {
+        val ds = DataStoreFinder.getDataStore(dsParams)
+        ds.createSchema(jtsExampleSft)
 
-      WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
-        jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+          jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        }
+
+        val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+        true mustEqual(true)
       }
+      "should convert to point rdd" in {
+        val ds = DataStoreFinder.getDataStore(dsParams)
+        ds.createSchema(jtsExampleSft)
 
-      val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-      true mustEqual(true)
-    }
-    "should convert to point rdd" in {
-      val ds = DataStoreFinder.getDataStore(dsParams)
-      ds.createSchema(jtsExampleSft)
+        WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+          jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        }
 
-      WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
-        jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+        val pointRDD = rdd.map(simpleFeatureToPoint)
+        pointRDD.collect().foreach(println)
+
+        var isPointRDD = true
+        pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
+        isPointRDD mustEqual(true)
       }
+      "should convert to polygon rdd" in {
+        val ds = DataStoreFinder.getDataStore(dsParams)
+        ds.createSchema(jtsExampleSft)
 
-      val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-      val pointRDD = rdd.map(simpleFeatureToPoint)
-      pointRDD.collect().foreach(println)
+        WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+          jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        }
 
-      var isPointRDD = true
-      pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
-      isPointRDD mustEqual(true)
+        val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+        val polygonRDD = rdd.map(simpleFeatureToPolygon)
+        polygonRDD.collect().foreach(println)
+
+        var isPolygonRDD = true
+        polygonRDD.collect().foreach(poly => isPolygonRDD = (isPolygonRDD && poly.isInstanceOf[Polygon]))
+        isPolygonRDD mustEqual(true)
+      }
+      "should convert to long/lat rdd" in {
+        val ds = DataStoreFinder.getDataStore(dsParams)
+        ds.createSchema(jtsExampleSft)
+
+        WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+          jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+        }
+
+        val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+        val pointRDD = rdd.map(simpleFeatureToLongLat)
+        pointRDD.collect().foreach(println)
+
+        var isPointRDD = true
+        pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
+        isPointRDD mustEqual(true)
+      }
     }
-  }
 
   "spark jts module" should {
 
