@@ -10,10 +10,12 @@ package org.locationtech.geomesa.geospark
 
 import scala.collection.JavaConversions._
 
+import com.vividsolutions.jts.geom.Envelope
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
+import org.datasyslab.geospark.spatialOperator.RangeQuery
 import org.datasyslab.geospark.spatialRDD.{CircleRDD, PointRDD, PolygonRDD}
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
 import org.geotools.geometry.jts.JTSFactoryFinder
@@ -46,14 +48,12 @@ class GeoSparkTest extends Specification with TestEnvironment
   val simpleFeatureToPoint = (sf: SimpleFeature)  => {
       val pt = sf.getAttribute("point").asInstanceOf[Point]
       pt.setUserData(sf)
-      println(pt.getUserData)
       pt
   }
 
   val simpleFeatureToPolygon = (sf: SimpleFeature)  => {
     val poly = sf.getAttribute("polygon").asInstanceOf[Polygon]
     poly.setUserData(sf)
-    println(poly.getUserData)
     poly
   }
 
@@ -63,7 +63,6 @@ class GeoSparkTest extends Specification with TestEnvironment
     val long = sf.getAttribute("longitude").asInstanceOf[Double]
     val pt = geometryFactory.createPoint(new Coordinate(long, lat))
     pt.setUserData(sf)
-    println("(Long,Lat): " + pt.getUserData)
     pt
   }
 
@@ -148,6 +147,7 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val pointRDD = rdd.map(simpleFeatureToPoint)
+        println("Point:")
         pointRDD.collect().foreach(println)
 
         var isPointRDD = true
@@ -164,6 +164,7 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val polygonRDD = rdd.map(simpleFeatureToPolygon)
+        println("Poly:")
         polygonRDD.collect().foreach(println)
 
         var isPolygonRDD = true
@@ -180,6 +181,7 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val pointRDD = rdd.map(simpleFeatureToLongLat)
+        println("Long/Lat:")
         pointRDD.collect().foreach(println)
 
         var isPointRDD = true
@@ -187,6 +189,34 @@ class GeoSparkTest extends Specification with TestEnvironment
         isPointRDD mustEqual(true)
       }
     }
+
+  "geospark module" should {
+    "read from GeoMesaSpark RDD" >> {
+      val ds = DataStoreFinder.getDataStore(dsParams)
+      ds.createSchema(jtsExampleSft)
+
+      WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
+        jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
+      }
+
+      val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
+      val pointRDD = rdd.map(simpleFeatureToPoint)
+      val gsPointRDD = new PointRDD(pointRDD)
+//      println("GeoSparkPointRDD:")
+//
+//      val rangeQueryWindow = new Envelope(-90.01, -80.01, 30.01, 40.01)
+//      val considerBoundaryIntersection = false // Only return gemeotries fully covered by the window
+//      val usingIndex = false
+//      var queryResult = RangeQuery.SpatialRangeQuery(gsPointRDD, rangeQueryWindow, considerBoundaryIntersection, usingIndex)
+
+      true mustEqual(true)
+//      pointRDD.collect().foreach(println)
+//
+//      var isPointRDD = true
+//      pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
+//      isPointRDD mustEqual(true)
+    }
+  }
 
   "spark jts module" should {
 
