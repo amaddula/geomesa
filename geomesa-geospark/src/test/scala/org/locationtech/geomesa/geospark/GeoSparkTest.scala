@@ -15,7 +15,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types._
-import org.datasyslab.geospark.spatialOperator.RangeQuery
+import org.datasyslab.geospark.spatialOperator.{KNNQuery, RangeQuery}
 import org.datasyslab.geospark.spatialRDD.{CircleRDD, PointRDD, PolygonRDD}
 import org.geotools.data.{DataStoreFinder, Query, Transaction}
 import org.geotools.geometry.jts.JTSFactoryFinder
@@ -202,7 +202,14 @@ class GeoSparkTest extends Specification with TestEnvironment
       val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
       val pointRDD = rdd.map(simpleFeatureToPoint)
       val gsPointRDD = new PointRDD(pointRDD)
-//      println("GeoSparkPointRDD:")
+      val geometryFactory = new GeometryFactory()
+      val pointObject = geometryFactory.createPoint(new Coordinate(-84.01, 34.01))
+      val K = 1000 // K Nearest Neighbors
+      val usingIndex = false
+      val result = KNNQuery.SpatialKnnQuery(gsPointRDD, pointObject, K, usingIndex)
+
+
+      //      println("GeoSparkPointRDD:")
 //
 //      val rangeQueryWindow = new Envelope(-90.01, -80.01, 30.01, 40.01)
 //      val considerBoundaryIntersection = false // Only return gemeotries fully covered by the window
