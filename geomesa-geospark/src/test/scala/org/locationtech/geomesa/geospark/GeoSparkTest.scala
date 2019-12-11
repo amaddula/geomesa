@@ -35,28 +35,30 @@ class GeoSparkTest extends Specification with TestEnvironment
                                          with GeoMesaSparkTestEnvironment
                                          with GeoSparkTestEnvironment {
 
-  //note that each mixin trait has different spark sessions and spark contexts
-  //TestEnvironment is used to parse the csv into dataframes
-  //GeoMesaSparkTestEnvironment is for the tests modeled after the GeoMesaSpatialRDDProvider
-  //GeoSparkTestEnvironment is going to be used for managing data in GeoSpark
+  //  TestEnvironment used to parse CSV's into DataFrames
+  //  GeoMesaSparkTestEnvironment is used for creating RDDs in a GeoMesaSpark context
+  //  GeoSparkTestEnvironment used for managing data in GeoSpark
 
   sequential
 
   var df: DataFrame = _
   var newDF: DataFrame = _
 
+  // Convert SimpleFeature to Point
   val simpleFeatureToPoint = (sf: SimpleFeature)  => {
       val pt = sf.getAttribute("point").asInstanceOf[Point]
       pt.setUserData(sf)
       pt
   }
 
+  // Convert SimpleFeature to Polygon
   val simpleFeatureToPolygon = (sf: SimpleFeature)  => {
     val poly = sf.getAttribute("polygon").asInstanceOf[Polygon]
     poly.setUserData(sf)
     poly
   }
 
+  // Convert SimpleFeature to LongLat
   val simpleFeatureToLongLat = (sf: SimpleFeature)  => {
     val geometryFactory: GeometryFactory = JTSFactoryFinder.getGeometryFactory(null)
     val lat = sf.getAttribute("latitude").asInstanceOf[Double]
@@ -68,12 +70,6 @@ class GeoSparkTest extends Specification with TestEnvironment
 
   // before
   step {
-    val schema = StructType(Array(StructField("name",StringType, nullable=false),
-      StructField("pointText", StringType, nullable=false),
-      StructField("polygonText", StringType, nullable=false),
-      StructField("latitude", DoubleType, nullable=false),
-      StructField("longitude", DoubleType, nullable=false)))
-
     val dataFile = this.getClass.getClassLoader.getResource("jts-example.csv").getPath
     df = spark.read.format("csv")
       .option("delimiter", "\n")
@@ -90,32 +86,12 @@ class GeoSparkTest extends Specification with TestEnvironment
     SimpleFeatureTypes.createType("jtsExample",
     "*point:Point:srid=4326,*polygon:Polygon:srid=4326,latitude:Double,longitude:Double")
 
+  // initialize sample geometries
   lazy val jtsExampleFeatures: Seq[SimpleFeature] = Seq(
     ScalaSimpleFeature.create(jtsExampleSft, "itemA", "POINT(40 40)", "POLYGON((35 35, 45 35, 45 45, 35 45, 35 35))", 40, 40),
     ScalaSimpleFeature.create(jtsExampleSft, "itemB", "POINT(30 30)", "POLYGON((25 25, 35 25, 35 35, 25 35, 25 25))", 30, 30),
     ScalaSimpleFeature.create(jtsExampleSft, "itemC", "POINT(20 20)", "POLYGON((15 15, 25 15, 25 25, 15 25, 15 15))", 20, 20)
   )
-
-//  val isTypeRDD = (rddType: String, converter: SimpleFeature => Unit) => {
-//    val ds = DataStoreFinder.getDataStore(dsParams)
-//    ds.createSchema(jtsExampleSft)
-//
-//    WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
-//      jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
-//    }
-//
-//    val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-//    val typeRDD = rdd.map(converter)
-//    typeRDD.collect().foreach(println)
-//
-//    var typeMatches = true
-//    rddType match {
-//      case "Point" => typeRDD.collect().foreach(geom => typeMatches = (typeMatches && geom.isInstanceOf[Point]))
-//      case "Polygon" => typeRDD.collect().foreach(geom => typeMatches = (typeMatches && geom.isInstanceOf[Polygon]))
-//      case _ => typeMatches = false
-//    }
-//    typeMatches
-//  }
 
   "geomesa rdd" should {
     "read from dataframe" in {
@@ -125,18 +101,7 @@ class GeoSparkTest extends Specification with TestEnvironment
     }
   }
 
-  "geospark rdd" should {
-      "read from geomesa rdd" in {
-        val ds = DataStoreFinder.getDataStore(dsParams)
-        ds.createSchema(jtsExampleSft)
-
-        WithClose(ds.getFeatureWriterAppend("jtsExample", Transaction.AUTO_COMMIT)) { writer =>
-          jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
-        }
-
-        val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
-        true mustEqual(true)
-      }
+  "simplefeatures" should {
       "should convert to point rdd" in {
         val ds = DataStoreFinder.getDataStore(dsParams)
         ds.createSchema(jtsExampleSft)
@@ -147,7 +112,6 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val pointRDD = rdd.map(simpleFeatureToPoint)
-        println("Point:")
         pointRDD.collect().foreach(println)
 
         var isPointRDD = true
@@ -164,7 +128,6 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val polygonRDD = rdd.map(simpleFeatureToPolygon)
-        println("Poly:")
         polygonRDD.collect().foreach(println)
 
         var isPolygonRDD = true
@@ -181,7 +144,6 @@ class GeoSparkTest extends Specification with TestEnvironment
 
         val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
         val pointRDD = rdd.map(simpleFeatureToLongLat)
-        println("Long/Lat:")
         pointRDD.collect().foreach(println)
 
         var isPointRDD = true
@@ -190,8 +152,8 @@ class GeoSparkTest extends Specification with TestEnvironment
       }
     }
 
-  "geospark module" should {
-    "read from GeoMesaSpark RDD" >> {
+  "geomesaspark rdd" should {
+    "convert to geospark rdd" >> {
       val ds = DataStoreFinder.getDataStore(dsParams)
       ds.createSchema(jtsExampleSft)
 
@@ -199,102 +161,13 @@ class GeoSparkTest extends Specification with TestEnvironment
         jtsExampleFeatures.take(3).foreach(FeatureUtils.write(writer, _, useProvidedFid = true))
       }
 
+      //  Create GeoMesaSpark Point RDD from SimpleFeatures
       val rdd = GeoMesaSpark(dsParams).rdd(new Configuration(), gmsc, dsParams, new Query("jtsExample"))
       val pointRDD = rdd.map(simpleFeatureToPoint)
+      //  Create GeoSpark Point RDD from GeoMesaSpark Point RDD
       val gsPointRDD = new PointRDD(pointRDD)
-      val geometryFactory = new GeometryFactory()
-      val pointObject = geometryFactory.createPoint(new Coordinate(-84.01, 34.01))
-      val K = 1000 // K Nearest Neighbors
-      val usingIndex = false
-      val result = KNNQuery.SpatialKnnQuery(gsPointRDD, pointObject, K, usingIndex)
-
-
-      //      println("GeoSparkPointRDD:")
-//
-//      val rangeQueryWindow = new Envelope(-90.01, -80.01, 30.01, 40.01)
-//      val considerBoundaryIntersection = false // Only return gemeotries fully covered by the window
-//      val usingIndex = false
-//      var queryResult = RangeQuery.SpatialRangeQuery(gsPointRDD, rangeQueryWindow, considerBoundaryIntersection, usingIndex)
-
-      true mustEqual(true)
-//      pointRDD.collect().foreach(println)
-//
-//      var isPointRDD = true
-//      pointRDD.collect().foreach(pt => isPointRDD = (isPointRDD && pt.isInstanceOf[Point]))
-//      isPointRDD mustEqual(true)
-    }
-  }
-
-  "spark jts module" should {
-
-    "have rows with user defined types" >> {
-
-//      val params = Map(
-//        "geotools" -> "true",
-//        "file"     -> "jts-example.csv")
-//      val query = new Query("locations")
-//      val rdd = GeoMesaSpark(params).rdd(new Configuration(), sc, params, query)
-
-//            spark.sql(
-//              """
-//                |SELECT *
-//                |FROM inputtable
-//              """.stripMargin).show()
-
-      //      newDF = spark.sql(
-      //        """
-      //          |SELECT ST_PointFromText(_c1,' ') AS pointshape
-      //          |SELECT ST_PolygonFromText(_c2, ' ') AS polygonshape
-      //          |SELECT ST_PointFromText(
-      //          |FROM inputtable
-      //    """.stripMargin)
-
-      //      newDF = spark.sql(
-      //        """
-      //          |SELECT ST_Point(cast(inputtable._c3 as Decimal(24,20)),cast(inputtable._c4 as Decimal(24,20))) as shape
-      //          |FROM inputtable
-      //    """.stripMargin)
-      //      newDF.createOrReplaceTempView("newdf")
-      //      newDF.show()
-
-      //      newDF = spark.sql(
-      //        """
-      //          |SELECT ST_GeomFromWKT(_c2) AS polygonshape
-      //          |FROM inputtable
-      //    """.stripMargin)
-      //      newDF.createOrReplaceTempView("newdf")
-      //      newDF.show()
-
-      //      JTS VERSION
-      //      newDF = df.withColumn("point", st_pointFromText(col("pointText")))
-      //        .withColumn("polygon", st_polygonFromText(col("polygonText")))
-      //        .withColumn("pointB", st_makePoint(col("latitude"), col("longitude")))
-      //
-      //      newDF.createOrReplaceTempView("example")
-      //      val row = newDF.first()
-      //      val gf = new GeometryFactory
-      //      row.get(5).isInstanceOf[Point] mustEqual true
-      //      row.get(6).isInstanceOf[Polygon] mustEqual true
-      //      row.get(7).isInstanceOf[Point] mustEqual true
       true mustEqual(true)
     }
-
-    "create a df from sequence of points" >> {
-
-      //      JTS VERSION
-      //      val points = newDF.collect().map{r => r.getAs[Point](5)}
-      //      val testDF = spark.createDataset(points).toDF()
-      //      testDF.count() mustEqual df.count()
-      true mustEqual(true)
-    }
-
-    //    "udfs intergrate with dataframe api" >> {
-    //      val countSQL = sc.sql("select * from example where st_contains(st_makeBBOX(0.0, 0.0, 90.0, 90.0), point)").count()
-    //      val countDF = newDF
-    //        .where(st_contains(st_makeBBOX(lit(0.0), lit(0.0), lit(90.0), lit(90.0)), col("point")))
-    //        .count()
-    //      countSQL mustEqual countDF
-    //    }
   }
 
   // after
@@ -302,4 +175,3 @@ class GeoSparkTest extends Specification with TestEnvironment
     spark.stop()
   }
 }
-
